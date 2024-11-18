@@ -1,0 +1,27 @@
+type AllocationData {
+  date: DateTime!
+  percentage: Decimal
+  return10: Decimal
+}
+
+"""
+Implement the DateTime<Utc> scalar
+
+The input/output is a string in RFC3339 format.
+"""
+scalar DateTime
+
+scalar Decimal
+
+type Query {
+  queryAllocationAndSpxReturns: StockToAssetAllocation!
+}
+
+type StockToAssetAllocation {
+  correlationSquared: Decimal
+  expectedReturns: Decimal
+  extrapolatedReturns: Decimal
+  lastUpdatedDate: DateTime!
+  lastExtrapolatedDate: DateTime!
+  data: [AllocationData!]!
+}

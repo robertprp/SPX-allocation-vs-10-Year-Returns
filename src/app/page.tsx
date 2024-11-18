@@ -1,101 +1,55 @@
-import Image from "next/image";
+import Chart from '@/components/Chart';
+import {createApolloClient} from "@/core/api/client";
+import {AllocationAndSpxReturnsQuery} from "@/core/api/gql/stock-to-asset-allocation.generated";
+import {QUERY_ALLOCATION_AND_Spx_RETURNS} from "@/core/api/gql/stock-to-asset-allocation";
+import BigNumber from "bignumber.js";
 
-export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+export default async function Home() {
+    const client = createApolloClient();
+    const {  error, loading, data} = await client.query<AllocationAndSpxReturnsQuery>({ query: QUERY_ALLOCATION_AND_Spx_RETURNS })
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    if (loading) return <p>Loading...</p>;
+    if (error) return <p>Error : {error.message}</p>;
+
+    const correlationSquared = new BigNumber(data.queryAllocationAndSpxReturns.correlationSquared ?? 0).abs().toNumber().toFixed(5);
+    const expectedReturns = new BigNumber(data.queryAllocationAndSpxReturns.expectedReturns ?? 0).toNumber();
+    const lastUpdatedDate = new Date(data.queryAllocationAndSpxReturns.lastUpdatedDate).toLocaleDateString();
+    const extrapolatedReturns = new BigNumber(data.queryAllocationAndSpxReturns.extrapolatedReturns ?? 0).multipliedBy(100).toFixed();
+    const lastExtrapolatedDate = new Date(data.queryAllocationAndSpxReturns.lastExtrapolatedDate).toLocaleDateString();
+
+    const allocationAxisTitle = "Stock Allocation (%)";
+    const allocationPercentageMax = 57.5;
+    const allocationPercentageMin = 17.5;
+    const chartTitle = "Stock Asset Allocation vs S&P 500 Returns";
+    const returnsAxisTitle = "S&P 500 10-Year Returns (%)";
+
+    const chartData = getChartData(data)
+    return (
+        <div>
+            <div className="pt-10">
+                <Chart chartData={chartData} allocationAxisTitle={allocationAxisTitle} allocationPercentageMax={allocationPercentageMax} allocationPercentageMin={allocationPercentageMin} chartTitle={chartTitle} returnsAxisTitle={returnsAxisTitle}/>
+            </div>
+            <div className="mt-10 flex items-center justify-center gap-2">
+                <div id="correlation-squared" className="border w-fit p-2 border-black">R<sup>2</sup>: {correlationSquared}</div>
+                <div id="expected-returns" className="border w-fit p-2 border-black">Expected Returns: {expectedReturns}</div>
+                <div id="last-updated-date" className="border w-fit p-2 border-black">Last Updated Date: {lastUpdatedDate}</div>
+                <div id="extrapolated-returns" className="border w-fit p-2 border-black">Extrapolated Returns: {extrapolatedReturns}</div>
+                <div id="last-extrapolated-date" className="border w-fit p-2 border-black">Last Extrapolated Date: {lastExtrapolatedDate}</div>
+            </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+) ;
+}
+
+function getChartData(data: AllocationAndSpxReturnsQuery) {
+    return data?.queryAllocationAndSpxReturns.data.map(item => {
+        const date = new Date(item.date);
+        const return10 = new BigNumber(item.return10 ?? 0).toNumber();
+        const percentage = new BigNumber(item.percentage ?? 0).toNumber();
+
+        return {
+            date: date.toDateString(),
+            return_10: return10,
+            percentage
+        }
+    }) ?? [];
 }
