@@ -1,23 +1,23 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import type { CodegenConfig } from '@graphql-codegen/cli';
+import type { CodegenConfig } from "@graphql-codegen/cli";
 
 const scalars = {
-  Decimal: 'BigNumber',
-  BigDecimal: 'BigNumber',
-  DateTime: 'Date',
-  NaiveDateTime: 'string',
-  Upload: 'File',
-  JSON: 'string',
+  Decimal: "BigNumber",
+  BigDecimal: "BigNumber",
+  DateTime: "Date",
+  NaiveDateTime: "string",
+  Upload: "File",
+  JSON: "string",
 };
 
 const config: CodegenConfig = {
   overwrite: true,
-  schema: 'schema.graphql',
-  documents: ['src/core/api/gql/**/*.ts', '!**/*.generated.ts'],
+  schema: "schema.graphql",
+  documents: ["src/core/api/gql/**/*.ts", "!**/*.generated.ts"],
   generates: {
-    'src/core/api/schema.ts': {
+    "src/core/api/schema.ts": {
       plugins: [
-        'typescript',
+        "typescript",
         {
           add: {
             content: "import BigNumber from 'bignumber.js'",
@@ -28,19 +28,19 @@ const config: CodegenConfig = {
         scalars,
       },
     },
-    'src/core/api': {
+    "src/core/api": {
       config: {
         strictScalars: true,
         scalars,
-        importQueryTypesFrom: 'core/api/query-types',
+        importQueryTypesFrom: "core/api/query-types",
       },
-      preset: 'near-operation-file',
+      preset: "near-operation-file",
       presetConfig: {
-        extension: '.generated.ts',
-        baseTypesPath: 'schema.ts',
+        extension: ".generated.ts",
+        baseTypesPath: "schema.ts",
       },
       plugins: [
-        'typescript-operations',
+        "typescript-operations",
         {
           add: {
             content: `/* eslint-disable */
@@ -52,7 +52,7 @@ const config: CodegenConfig = {
     },
   },
   hooks: {
-    afterAllFileWrite: ['prettier --write'],
+    afterAllFileWrite: ["prettier --write"],
   },
 };
 
