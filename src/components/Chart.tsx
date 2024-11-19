@@ -188,7 +188,7 @@ export default function AllocationChart({
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
-        height: "50vh", // Adjust as needed
+        height: "60vh", // Adjust as needed
         width: "100%",
       }}
     >
