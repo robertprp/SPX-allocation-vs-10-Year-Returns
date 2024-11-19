@@ -29,6 +29,7 @@ ChartJS.register(
 
 import React from "react";
 import "chartjs-adapter-date-fns";
+import annotationPlugin from "chartjs-plugin-annotation";
 
 // Register required Chart.js components
 ChartJS.register(
@@ -40,10 +41,12 @@ ChartJS.register(
   Tooltip,
   Legend,
   TimeScale,
+    annotationPlugin
 );
 
 export default function AllocationChart({
   chartData,
+  recessionData,
   chartTitle,
   returnsAxisTitle,
   allocationAxisTitle,
@@ -51,6 +54,7 @@ export default function AllocationChart({
   allocationPercentageMax,
 }: {
   chartData: { date: string; return_10: number; percentage: number }[];
+  recessionData: { startDate: Date; endDate: Date }[];
   chartTitle: string;
   returnsAxisTitle: string;
   allocationAxisTitle: string;
@@ -108,10 +112,18 @@ export default function AllocationChart({
         mode: "index",
         intersect: false,
         callbacks: {
-          label: (context) =>
+          label: (context: any) =>
             `${context.dataset.label}: ${context.raw.y.toFixed(2)}%`,
         },
       },
+    },
+    annotation: {
+      annotations: recessionData.map((recession) => ({
+        type: "box",
+        xMin: new Date(recession.startDate).getTime(),
+        xMax: new Date(recession.endDate).getTime(),
+        backgroundColor: "rgba(128, 128, 128, 0.2)", // Grey background
+      })),
     },
     scales: {
       x: {
@@ -128,7 +140,7 @@ export default function AllocationChart({
           text: allocationAxisTitle,
         },
         ticks: {
-          callback: (value) => `${value}%`,
+          callback: (value: any) => `${value}%`,
         },
         min: allocationPercentageMin,
         max: allocationPercentageMax,
@@ -140,7 +152,7 @@ export default function AllocationChart({
           text: returnsAxisTitle,
         },
         ticks: {
-          callback: (value) => `${value}%`,
+          callback: (value: any) => `${value}%`,
         },
         max: 24,
         min: -7.5,
@@ -149,6 +161,27 @@ export default function AllocationChart({
     },
   };
 
+  // Add a plugin for rendering the recession rectangles
+  const recessionPlugin = {
+    id: "recessionBackground",
+    beforeDraw: (chart: any) => {
+      const ctx = chart.ctx;
+      const xAxis = chart.scales.x;
+      const yAxis = chart.scales.allocation;
+
+      recessionData.forEach(({ startDate, endDate }) => {
+        const startX = xAxis.getPixelForValue(new Date(startDate).getTime());
+        const endX = xAxis.getPixelForValue(new Date(endDate).getTime());
+
+        // Draw rectangle
+        ctx.fillStyle = "rgba(128, 128, 128, 0.2)"; // Grey background
+        ctx.fillRect(startX, yAxis.top, endX - startX, yAxis.bottom - yAxis.top);
+      });
+    },
+  };
+
+  // Register the plugin
+  ChartJS.register(recessionPlugin);
   return (
     <div
       style={{
@@ -159,7 +192,7 @@ export default function AllocationChart({
         width: "100%",
       }}
     >
-      <Line data={data} options={options} />
+      <Line data={data as any} options={options as any} />
     </div>
   );
 }

@@ -1,3 +1,9 @@
+"""
+Indicates that an Input Object is a OneOf Input Object (and thus requires
+exactly one of its field be provided)
+"""
+directive @oneOf on INPUT_OBJECT
+
 type AllocationData {
   date: DateTime!
   percentage: Decimal
@@ -15,6 +21,12 @@ scalar Decimal
 
 type Query {
   queryAllocationAndSpxReturns: StockToAssetAllocation!
+  getRecessionData: [RecessionType!]!
+}
+
+type RecessionType {
+  startDate: DateTime!
+  endDate: DateTime!
 }
 
 type StockToAssetAllocation {

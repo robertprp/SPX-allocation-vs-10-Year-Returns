@@ -24,6 +24,7 @@
     "bignumber.js": "^9.1.2",
     "chart.js": "^4.4.6",
     "chartjs-adapter-date-fns": "^3.0.0",
+    "chartjs-plugin-annotation": "^3.1.0",
     "date-fns": "^4.1.0",
     "graphql": "^16.9.0",
     "graphql-request": "^6.1.0",
