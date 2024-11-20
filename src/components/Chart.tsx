@@ -127,6 +127,9 @@ export default function AllocationChart({
     },
     scales: {
       x: {
+        grid: {
+          display: false,
+        },
         type: "time",
         title: {
           display: true,
@@ -135,6 +138,7 @@ export default function AllocationChart({
       },
       allocation: {
         position: "left",
+        grid: { display: false},
         title: {
           display: true,
           text: allocationAxisTitle,
@@ -147,6 +151,7 @@ export default function AllocationChart({
       },
       returns: {
         position: "right",
+        grid: { display: false},
         title: {
           display: true,
           text: returnsAxisTitle,

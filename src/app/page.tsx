@@ -34,7 +34,7 @@ export default async function Home() {
   const chartConfig = {
     allocationAxisTitle: "Stock Allocation (%)",
     allocationPercentageMin: 17.5,
-    allocationPercentageMax: 60,
+    allocationPercentageMax: 57.5,
     chartTitle: "Stock Asset Allocation vs S&P 500 Returns",
     returnsAxisTitle: "S&P 500 10-Year Returns (%)",
     recessionData: recessionData?.getRecessionData ?? []
