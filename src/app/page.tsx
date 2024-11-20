@@ -1,4 +1,3 @@
-"use server";
 import Chart from "@/components/Chart";
 import { AllocationAndSpxReturnsQuery } from "@/core/api/gql/stock-to-asset-allocation.generated";
 import { QUERY_ALLOCATION_AND_Spx_RETURNS } from "@/core/api/gql/stock-to-asset-allocation";
@@ -7,16 +6,19 @@ import { formatBigNumber, formatDate } from "@/utils/format";
 import { createApolloClient } from "@/core/api/client";
 import {RECESSION_QUERY} from "@/core/api/gql/recession";
 import {RecessionQuery} from "@/core/api/gql/recession.generated";
-
+export const revalidate = 3600
 export default async function Home() {
   const client = createApolloClient();
+  const context = { next: { revalidate } };
   const { error, loading, data } =
     await client.query<AllocationAndSpxReturnsQuery>({
       query: QUERY_ALLOCATION_AND_Spx_RETURNS,
+      context
     });
 
   const { data: recessionData } = await client.query<RecessionQuery>({
     query: RECESSION_QUERY,
+    context
   });
 
   if (loading) return <p>Loading...</p>;
