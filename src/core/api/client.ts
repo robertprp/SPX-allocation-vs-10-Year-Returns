@@ -1,5 +1,6 @@
 import { ApolloClient, InMemoryCache } from "@apollo/client";
 
+// Urls
 const LOCAL_URL = "http://localhost/";
 const GRAPHQL_URL = "http://192.248.154.109/";
 
