@@ -2,4 +2,4 @@
 https://finance.rbus.me/
 
 ### Contact (Discord)
-.rbus
+rbus#7954
