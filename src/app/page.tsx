@@ -44,17 +44,37 @@ export default async function Home() {
 
   return (
     <div className="py-10">
-      <Header title="Stock Asset Allocation vs SPX 10-Year Return" />
+      <div className="max-w-4xl mx-auto">
+        <Header title="Stock Asset Allocation vs SPX 10-Year Return" />
+        <div>
+          <p>
+            This is a tool to help investors understand the correlation between
+            stock asset allocation and S&P 500 returns. The tool uses a linear
+            regression model to predict the correlation between the two variables.
+            The model is trained on historical data and is updated regularly to
+            reflect changes in the market.
+          </p>          
+          <p>
+            If you want to support this project, so I can spin up a server and fetch data everyday,
+            you can donate to this EVM address: <span className="font-bold">0x284653914156BF2729b04b5FfA68d722f13b034A</span>
+          </p>
+        </div>
+      </div>
       <div className="pt-10">
         <Chart {...chartConfig} chartData={chartData} />
       </div>
       <Statistics
-        correlationSquared={correlationSquared}
-        expectedReturns={expectedReturns}
-        lastUpdatedDate={lastUpdatedDate}
-        extrapolatedReturns={extrapolatedReturns}
-        lastExtrapolatedDate={lastExtrapolatedDate}
+      correlationSquared={correlationSquared}
+      expectedReturns={expectedReturns}
+      lastUpdatedDate={lastUpdatedDate}
+      extrapolatedReturns={extrapolatedReturns}
+      lastExtrapolatedDate={lastExtrapolatedDate}
       />
+      
+      <div className="mx-auto flex justify-center mt-2">
+        If you want to contact me, please reach out at&nbsp;
+        <a className="underline font-bold text-blue-500" href="mailto:me@rbus.me">me@rbus.me</a>
+      </div>
     </div>
   );
 }
@@ -81,14 +101,14 @@ function Statistics({
       <div className="mt-10 mx-auto grid grid-cols-3 gap-2">
         <StatCard label="R²" value={correlationSquared} />
         <StatCard
-          label="Expected 10-Year SPX Returns"
-          value={`${expectedReturns}%`}
+        label="Expected 10-Year SPX Returns"
+        value={`${expectedReturns}%`}
         />
         <StatCard label="Data Last Updated Date" value={lastUpdatedDate} />
         <StatCard
-          label="Extrapolated 10-Year SPX Returns"
-          value={`${extrapolatedReturns}%*`}
-          span={2}
+        label="Extrapolated 10-Year SPX Returns"
+        value={`${extrapolatedReturns}%*`}
+        span={2}
         />
         <StatCard label="Last Extrapolated Date" value={lastExtrapolatedDate} />
       </div>
