@@ -2,7 +2,7 @@ import { ApolloClient, InMemoryCache } from "@apollo/client";
 
 // Urls
 const LOCAL_URL = "http://localhost:4491/";
-const GRAPHQL_URL = "http://8079-79-151-230-66.ngrok-free.app";
+const GRAPHQL_URL = "https://29ba-79-151-230-65.ngrok-free.app/";
 
 export const createApolloClient = () => {
   return new ApolloClient({
