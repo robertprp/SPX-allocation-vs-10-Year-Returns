@@ -5,6 +5,9 @@ export class ApiError extends Error {
     public readonly status: number,
     public readonly code: string,
     message: string,
+    public readonly retryable = false,
+    public readonly retryAfterSeconds: number | null = null,
+    public readonly requestId: string | null = null,
   ) {
     super(message);
     this.name = "ApiError";
@@ -26,7 +29,20 @@ function retryDelay(milliseconds: number, signal?: AbortSignal): Promise<void> {
   });
 }
 
-/** Read-only REST requests. Only 503 responses are retried, at most twice. */
+function nonnegativeSeconds(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0
+    ? value
+    : null;
+}
+
+function headerRetrySeconds(value: string | null): number | null {
+  if (value === null) return null;
+  if (/^\d+(\.\d+)?$/.test(value)) return nonnegativeSeconds(Number(value));
+  const date = Date.parse(value);
+  return Number.isFinite(date) ? Math.max(0, (date - Date.now()) / 1000) : null;
+}
+
+/** Fresh REST reads. Retry explicitly retryable 503s, at most twice. */
 export async function apiGet<T>(
   path: string,
   signal?: AbortSignal,
@@ -41,23 +57,43 @@ export async function apiGet<T>(
       headers: { Accept: "application/json" },
       cache: "no-store",
       signal: signal
-        ? AbortSignal.any([signal, AbortSignal.timeout(10_000)])
-        : AbortSignal.timeout(10_000),
+        ? AbortSignal.any([signal, AbortSignal.timeout(20_000)])
+        : AbortSignal.timeout(20_000),
     });
     if (response.ok) return response.json() as Promise<T>;
 
     const body: unknown = await response.json().catch(() => null);
     const error = body as Partial<ApiErrorBody> | null;
-    if (response.status === 503 && attempt < 2) {
-      await retryDelay(250 * 2 ** attempt, signal);
-      continue;
-    }
-    throw new ApiError(
+    const bodyDelay = nonnegativeSeconds(error?.retry_after_seconds);
+    const headerDelay = headerRetrySeconds(response.headers.get("Retry-After"));
+    const retryAfterSeconds =
+      bodyDelay === null && headerDelay === null
+        ? null
+        : Math.max(bodyDelay ?? 0, headerDelay ?? 0);
+    const apiError = new ApiError(
       response.status,
       typeof error?.code === "string" ? error.code : "http_error",
       typeof error?.message === "string"
         ? error.message
         : `HTTP ${response.status}`,
+      error?.retryable === true,
+      retryAfterSeconds,
+      typeof error?.request_id === "string"
+        ? error.request_id
+        : response.headers.get("x-request-id"),
     );
+    const delay =
+      Math.max(250 * 2 ** attempt, (retryAfterSeconds ?? 0) * 1000) +
+      Math.random() * 100;
+    if (
+      response.status === 503 &&
+      apiError.retryable &&
+      attempt < 2 &&
+      delay <= 30_000
+    ) {
+      await retryDelay(delay, signal);
+      continue;
+    }
+    throw apiError;
   }
 }

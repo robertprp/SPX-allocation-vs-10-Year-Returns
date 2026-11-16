@@ -11,13 +11,13 @@
     "test": "tsx --test tests/*.test.ts",
     "prettier": "prettier --write .",
     "api:schema": "node scripts/pull-openapi.mjs",
-    "api:generate": "openapi-typescript openapi.json -o src/core/api/types.generated.ts"
+    "api:generate": "openapi-typescript openapi.json -o src/core/api/types.generated.ts",
+    "audit:chart": "node scripts/audit-chart-formulas.mjs"
   },
   "dependencies": {
     "bignumber.js": "11.1.5",
     "chart.js": "4.6.1",
     "chartjs-adapter-date-fns": "3.0.0",
-    "chartjs-plugin-annotation": "3.1.0",
     "date-fns": "4.4.0",
     "next": "16.4.6",
     "react": "19.3.1",

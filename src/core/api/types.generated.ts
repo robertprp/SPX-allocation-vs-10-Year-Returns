@@ -12,12 +12,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Historical allocation regression, preserving the former GraphQL analysis.
-         * @description Uses nonzero allocation/return pairs for ordinary least squares. Expected and extrapolated
-         *     returns are approximate numeric fractions (0.05 = 5%). Preserves the historical 90-day
-         *     publication adjustment and price-ratio extrapolation. The SQL correlation view uses its own
-         *     positive-return filter, so its squared correlation need not equal the regression R².
-         *     Requires monthly history, allocations, daily observations and a nonconstant regression sample.
+         * Stock asset allocation versus realized forward ten-year S&P 500 returns.
+         * @description Returns the complete available allocation history, including recent quarters. Each point
+         *     is paired with the forward ten-year return beginning in the same month when available;
+         *     otherwise return_10 is null. The reference correlation sample filter applies only to
+         *     correlation, never to either chart series. Dates have no publication offset.
+         *     No forecasts, daily-price extrapolation, or other return horizons are returned.
          */
         get: operations["getAllocationReturnsAnalysis"];
         put?: never;
@@ -165,27 +165,27 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         AllocationAnalysis: {
-            /** Format: double */
+            /**
+             * Format: double
+             * @description Squared Pearson correlation from the reference SQL sample; null if undefined.
+             */
             correlation_squared?: number | null;
             data: components["schemas"]["AllocationPoint"][];
-            /** Format: double */
-            expected_returns: number;
-            /** Format: double */
-            extrapolated_returns: number;
-            /** Format: date-time */
-            last_extrapolated_date: string;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description Latest available allocation observation date, not the scraper's last-run timestamp.
+             */
             last_updated_date: string;
         };
         AllocationPoint: {
             /**
              * Format: date-time
-             * @description Legacy allocation publication-date adjustment: add 90 days, then round up to month start.
+             * @description Source allocation month; paired with the forward return starting in that same month.
              */
             date: string;
-            /** @description Allocation ratio. Decimal string; for example "0.25" means 25%. */
+            /** @description Source allocation ratio, stored at the reference's five-decimal precision. */
             percentage?: string | null;
-            /** @description Realized forward ten-year annualized return. Null when future observations are unavailable. */
+            /** @description Realized forward ten-year annualized return; null when 120 future monthly observations are unavailable. */
             return_10?: string | null;
         };
         DatasetStatus: {
@@ -201,6 +201,15 @@ export interface components {
         ErrorResponse: {
             code: string;
             message: string;
+            /** @description Correlates the response with x-request-id and server tracing spans. */
+            request_id?: string | null;
+            /**
+             * Format: int64
+             * @description Minimum suggested delay for retryable failures; otherwise null.
+             */
+            retry_after_seconds?: number | null;
+            /** @description True only when an unchanged request may succeed after a temporary failure. */
+            retryable: boolean;
         };
         Health: {
             status: string;
@@ -280,6 +289,14 @@ export interface operations {
                     "application/json": components["schemas"]["AllocationAnalysis"];
                 };
             };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -305,6 +322,14 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DatasetStatus"][];
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             503: {
@@ -344,6 +369,14 @@ export interface operations {
                 };
             };
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -395,6 +428,14 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -423,6 +464,14 @@ export interface operations {
                 };
             };
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -474,6 +523,14 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -518,6 +575,14 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -545,6 +610,22 @@ export interface operations {
                     "application/json": components["schemas"]["Health"];
                 };
             };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     getReadiness: {
@@ -562,6 +643,14 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Health"];
+                };
+            };
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             503: {

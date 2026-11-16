@@ -15,7 +15,8 @@ const geistMono = localFont({
 
 export const metadata: Metadata = {
   title: "Stock Asset Allocation vs SPX 10-Year Return",
-  description: "Analyze the correlation between investor equity allocation and S&P 500 10-year returns, inspired by The Single Greatest Predictor of Future Stock Market Returns. Includes links to FRED data, insights on recession shading, time window adjustments, and community-built financial tools.",
+  description:
+    "Stock asset allocation versus annualized ten-year S&P 500 returns.",
   icons: {
     icon: "@/favicon.ico",
   },

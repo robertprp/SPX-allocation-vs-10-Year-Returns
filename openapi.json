@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Financial Data API",
-    "description": "Read-only financial time series and allocation analysis. All timestamps are UTC RFC 3339. Decimal financial values are JSON strings to preserve precision. Fractions represent ratios, not percentage points. Empty collections return 200 with []. Forecasts require sufficient ingested history; 503 means data or a dependency is unavailable. No authentication is configured; run locally or behind your own authenticated gateway.",
+    "description": "Read-only financial time series and allocation analysis. All timestamps are UTC RFC 3339. Decimal financial values are JSON strings to preserve precision. Fractions represent ratios, not percentage points. Empty collections return 200 with []. Historical comparisons require sufficient ingested history; 503 means data or a dependency is unavailable. No authentication is configured; run locally or behind your own authenticated gateway.",
     "license": {
       "name": ""
     },
@@ -20,8 +20,8 @@
         "tags": [
           "analysis"
         ],
-        "summary": "Historical allocation regression, preserving the former GraphQL analysis.",
-        "description": "Uses nonzero allocation/return pairs for ordinary least squares. Expected and extrapolated\nreturns are approximate numeric fractions (0.05 = 5%). Preserves the historical 90-day\npublication adjustment and price-ratio extrapolation. The SQL correlation view uses its own\npositive-return filter, so its squared correlation need not equal the regression R².\nRequires monthly history, allocations, daily observations and a nonconstant regression sample.",
+        "summary": "Stock asset allocation versus realized forward ten-year S&P 500 returns.",
+        "description": "Returns the complete available allocation history, including recent quarters. Each point\nis paired with the forward ten-year return beginning in the same month when available;\notherwise return_10 is null. The reference correlation sample filter applies only to\ncorrelation, never to either chart series. Dates have no publication offset.\nNo forecasts, daily-price extrapolation, or other return horizons are returned.",
         "operationId": "getAllocationReturnsAnalysis",
         "responses": {
           "200": {
@@ -29,6 +29,15 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AllocationAnalysis"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -59,6 +68,15 @@
                   "items": {
                     "$ref": "#/components/schemas/DatasetStatus"
                   }
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -141,6 +159,15 @@
             }
           },
           "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
             "content": {
               "application/json": {
                 "schema": {
@@ -235,6 +262,15 @@
               }
             }
           },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "503": {
             "content": {
               "application/json": {
@@ -263,6 +299,15 @@
             }
           },
           "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
             "content": {
               "application/json": {
                 "schema": {
@@ -357,6 +402,15 @@
               }
             }
           },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "503": {
             "content": {
               "application/json": {
@@ -443,6 +497,15 @@
               }
             }
           },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "503": {
             "content": {
               "application/json": {
@@ -469,6 +532,24 @@
                 }
               }
             }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -484,6 +565,15 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -506,10 +596,7 @@
       "AllocationAnalysis": {
         "type": "object",
         "required": [
-          "expected_returns",
-          "extrapolated_returns",
           "last_updated_date",
-          "last_extrapolated_date",
           "data"
         ],
         "properties": {
@@ -518,7 +605,8 @@
               "number",
               "null"
             ],
-            "format": "double"
+            "format": "double",
+            "description": "Squared Pearson correlation from the reference SQL sample; null if undefined."
           },
           "data": {
             "type": "array",
@@ -526,21 +614,10 @@
               "$ref": "#/components/schemas/AllocationPoint"
             }
           },
-          "expected_returns": {
-            "type": "number",
-            "format": "double"
-          },
-          "extrapolated_returns": {
-            "type": "number",
-            "format": "double"
-          },
-          "last_extrapolated_date": {
-            "type": "string",
-            "format": "date-time"
-          },
           "last_updated_date": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "Latest available allocation observation date, not the scraper's last-run timestamp."
           }
         }
       },
@@ -553,21 +630,21 @@
           "date": {
             "type": "string",
             "format": "date-time",
-            "description": "Legacy allocation publication-date adjustment: add 90 days, then round up to month start."
+            "description": "Source allocation month; paired with the forward return starting in that same month."
           },
           "percentage": {
             "type": [
               "string",
               "null"
             ],
-            "description": "Allocation ratio. Decimal string; for example \"0.25\" means 25%."
+            "description": "Source allocation ratio, stored at the reference's five-decimal precision."
           },
           "return_10": {
             "type": [
               "string",
               "null"
             ],
-            "description": "Realized forward ten-year annualized return. Null when future observations are unavailable."
+            "description": "Realized forward ten-year annualized return; null when 120 future monthly observations are unavailable."
           }
         }
       },
@@ -599,7 +676,8 @@
         "type": "object",
         "required": [
           "code",
-          "message"
+          "message",
+          "retryable"
         ],
         "properties": {
           "code": {
@@ -607,6 +685,26 @@
           },
           "message": {
             "type": "string"
+          },
+          "request_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Correlates the response with x-request-id and server tracing spans."
+          },
+          "retry_after_seconds": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Minimum suggested delay for retryable failures; otherwise null.",
+            "minimum": 0
+          },
+          "retryable": {
+            "type": "boolean",
+            "description": "True only when an unchanged request may succeed after a temporary failure."
           }
         }
       },

@@ -11,10 +11,7 @@ import { formatBigNumber, formatDate } from "../src/utils/format";
 
 const analysis = {
   correlation_squared: null,
-  expected_returns: 0.04,
-  extrapolated_returns: 0.035,
   last_updated_date: "2026-07-01T00:00:00Z",
-  last_extrapolated_date: "2026-11-13T14:30:00Z",
   data: [
     {
       date: "2026-07-01T00:00:00Z",
@@ -130,14 +127,21 @@ test("non-JSON errors get an HTTP fallback", async (t) => {
 
 test("503 retries are bounded to three attempts", async (t) => {
   const mock = t.mock.method(globalThis, "fetch", async () =>
-    json({ code: "unavailable", message: "Insufficient inputs" }, 503),
+    json(
+      {
+        code: "unavailable",
+        message: "Temporary database failure",
+        retryable: true,
+      },
+      503,
+    ),
   );
   await assert.rejects(
     getAllocationAnalysis(),
     (error: unknown) =>
       error instanceof ApiError &&
       error.status === 503 &&
-      error.message === "Insufficient inputs",
+      error.message === "Temporary database failure",
   );
   assert.equal(mock.mock.callCount(), 3);
 });
@@ -145,7 +149,9 @@ test("503 retries are bounded to three attempts", async (t) => {
 test("503 can recover on a subsequent attempt", async (t) => {
   let calls = 0;
   t.mock.method(globalThis, "fetch", async () =>
-    ++calls === 1 ? json({ code: "unavailable" }, 503) : json(analysis),
+    ++calls === 1
+      ? json({ code: "unavailable", retryable: true }, 503)
+      : json(analysis),
   );
   assert.deepEqual(await getAllocationAnalysis(), analysis);
   assert.equal(calls, 2);
@@ -155,7 +161,7 @@ test("cancellation interrupts backoff and prevents more requests", async (t) => 
   const controller = new AbortController();
   const mock = t.mock.method(globalThis, "fetch", async () => {
     setTimeout(() => controller.abort(), 10);
-    return json({ code: "unavailable" }, 503);
+    return json({ code: "unavailable", retryable: true }, 503);
   });
   await assert.rejects(getAllocationAnalysis(controller.signal), {
     name: "AbortError",
@@ -190,4 +196,112 @@ test("OpenAPI-optional decimal fields also create chart gaps", () => {
   const chart = allocationChartData([{ date: "2026-07-01T00:00:00Z" }]);
   assert.equal(chart.datasets[0].data[0].y, null);
   assert.equal(chart.datasets[1].data[0].y, null);
+});
+
+test("allocation continues after the last known forward return on unchanged API dates", () => {
+  const points = [
+    { date: "2016-10-01T00:00:00Z", percentage: "0.30130", return_10: "0.05" },
+    { date: "2017-01-01T00:00:00Z", percentage: "0.35247", return_10: null },
+    { date: "2026-04-01T00:00:00Z", percentage: "0.56406", return_10: null },
+  ];
+  const chart = allocationChartData(points);
+  const [returns, allocation] = chart.datasets;
+
+  assert.equal(allocation.data.length, points.length);
+  assert.deepEqual(
+    allocation.data.map((point) => point.x),
+    points.map((point) => Date.parse(point.date)),
+  );
+  assert.deepEqual(
+    returns.data.map((point) => point.x),
+    allocation.data.map((point) => point.x),
+  );
+  assert.deepEqual(
+    returns.data.map((point) => point.y),
+    [5, null, null],
+  );
+  for (const [index, percentage] of [30.13, 35.247, 56.406].entries()) {
+    assert.ok(Math.abs(allocation.data[index].y! - percentage) < 1e-12);
+  }
+  assert.equal(returns.spanGaps, false);
+});
+
+test("nonretryable data_unavailable preserves error metadata without retrying", async (t) => {
+  const mock = t.mock.method(globalThis, "fetch", async () =>
+    json(
+      {
+        code: "data_unavailable",
+        message: "No allocation observations",
+        retryable: false,
+        retry_after_seconds: null,
+        request_id: "request-123",
+      },
+      503,
+    ),
+  );
+  await assert.rejects(
+    getAllocationAnalysis(),
+    (error: unknown) =>
+      error instanceof ApiError &&
+      !error.retryable &&
+      error.requestId === "request-123" &&
+      error.retryAfterSeconds === null,
+  );
+  assert.equal(mock.mock.callCount(), 1);
+});
+
+test("retry delay honors the larger server delay and retains request ID", async (t) => {
+  const delays: number[] = [];
+  const originalTimeout = globalThis.setTimeout;
+  t.mock.method(
+    globalThis,
+    "setTimeout",
+    (callback: () => void, delay?: number) => {
+      delays.push(delay ?? 0);
+      return originalTimeout(callback, 0);
+    },
+  );
+  const mock = t.mock.method(
+    globalThis,
+    "fetch",
+    async () =>
+      new Response(
+        JSON.stringify({
+          code: "unavailable",
+          message: "Temporarily unavailable",
+          retryable: true,
+          retry_after_seconds: 3,
+          request_id: null,
+        }),
+        {
+          status: 503,
+          headers: { "Retry-After": "2", "x-request-id": "header-id" },
+        },
+      ),
+  );
+  await assert.rejects(
+    getAllocationAnalysis(),
+    (error: unknown) =>
+      error instanceof ApiError &&
+      error.retryable &&
+      error.retryAfterSeconds === 3 &&
+      error.requestId === "header-id",
+  );
+  assert.equal(mock.mock.callCount(), 3);
+  assert.equal(delays.length, 2);
+  assert.ok(delays.every((delay) => delay >= 3000 && delay < 3100));
+});
+
+test("an allocation-only response still draws its complete history", () => {
+  const chart = allocationChartData([
+    { date: "2026-01-01T00:00:00Z", percentage: "0.50043", return_10: null },
+    { date: "2026-04-01T00:00:00Z", percentage: "0.56406", return_10: null },
+  ]);
+  assert.deepEqual(
+    chart.datasets[0].data.map((point) => point.y),
+    [null, null],
+  );
+  assert.match(chart.datasets[0].label!, /unavailable/);
+  assert.equal(chart.datasets[1].data.length, 2);
+  assert.ok(Math.abs(chart.datasets[1].data[1].y! - 56.406) < 1e-12);
 });

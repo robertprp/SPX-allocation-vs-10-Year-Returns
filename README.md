@@ -1,6 +1,6 @@
 # Finance Allocation
 
-Stock asset allocation and S&P 500 annualized ten-year returns, with recession shading.
+A chart of stock asset allocation versus S&P 500 annualized ten-year returns.
 
 ## Development
 
@@ -17,12 +17,11 @@ The REST backend defaults to `http://localhost:8080`. Override `API_BASE_URL` in
 ## REST v1 integration
 
 - Analysis: `GET /api/v1/analysis/allocation-returns`, including the complete `data` array.
-- Recessions: `GET /api/v1/recessions?limit=1000&offset=…`, loading pages until one contains fewer than 1000 rows.
-- Helpers also support dataset coverage and latest daily data; latest-daily 404 maps to `null`.
+- The page draws only the allocation and realized-return series. Shared API helpers also support paginated recessions, dataset coverage, and latest daily data, without adding those to the page.
 - Responses are bare objects/arrays with snake_case fields. Wire types in `src/core/api/types.ts` alias types generated from the checked-in `openapi.json`. These TypeScript types do not validate responses at runtime.
-- Decimal strings remain intact through server rendering and are converted only for charting or display. Missing values create chart gaps; zero returns remain visible. Dates retain their UTC timestamps.
-- Requests use fresh data at request time. HTTP 503 gets two retries with 250ms/500ms backoff, then an unavailable state with a retry button. Other HTTP errors are not retried automatically. Empty analysis and recession arrays are valid; recession failures do not hide successful analysis.
-- Squared correlation is labeled as correlation, since the API's filtered calculation is not necessarily the regression R². Latest observation dates do not indicate ingestion run times.
+- Decimal strings remain intact through server rendering and are converted only for charting or display. Chart ratios are multiplied by 100 once, with rounding only in tooltip text. Missing values create chart gaps; zero returns remain visible. Dates retain their UTC timestamps.
+- Requests use fresh data at request time. Only HTTP 503 errors marked `retryable: true` get up to two retries. Backoff honors server retry delays with jitter; nonretryable errors are surfaced immediately. An empty analysis array shows an empty state.
+- [Chart mathematics and reference comparison](docs/chart-mathematics.md) documents the annualized-return formula, unchanged source dates, fixed reference axes, and corrected allocation units. Run `pnpm audit:chart` for a read-only comparison against the live API.
 
 Backend API discovery: `GET /`, guide: `GET /docs`, machine-readable schema: `GET /openapi.json`. The backend can export its schema without a database using `cargo run --locked -- --export-openapi openapi.json`. Use that schema for future generated clients or runtime validators. A copy is checked in so generation works offline. Refresh it with `pnpm api:schema`, then run `pnpm api:generate`. Set `API_BASE_URL` in the command environment to pull from a different origin. The schema marks nullable properties optional, so chart conversion handles both null and omitted fields.
 
