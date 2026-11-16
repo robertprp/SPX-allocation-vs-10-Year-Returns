@@ -23,6 +23,24 @@ export default async function Home() {
       <h1 className="mx-auto max-w-4xl text-3xl font-extrabold text-center">
         Stock Asset Allocation vs SPX 10-Year Return
       </h1>
+      <section
+        aria-label="About this forecasting method"
+        className="mx-auto mt-4 max-w-4xl text-center text-sm leading-6 text-gray-600"
+      >
+        <p>
+          This chart explores stock asset allocation as an indicator for
+          forecasting annualized S&amp;P 500 returns over the following ten
+          years. The blue line shows realized historical returns, dated at the
+          start of each ten-year period.
+        </p>
+        <p className="mt-2">
+          <strong className="font-semibold text-gray-800">
+            Historical relationships can change and do not guarantee future
+            returns.
+          </strong>{" "}
+          This is an educational visualization, not financial advice.
+        </p>
+      </section>
       {errorMessage ? (
         <div role="status" className="py-10 text-center">
           <p>{errorMessage}</p>

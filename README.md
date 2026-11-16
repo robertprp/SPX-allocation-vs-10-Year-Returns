@@ -2,6 +2,20 @@
 
 A Next.js chart comparing US stock asset allocation with annualized forward ten-year S&P 500 returns. The red allocation series continues through the latest available quarter; the blue return series ends about ten years earlier because more recent outcomes are not yet known.
 
+## Deployments
+
+- [Frontend](https://spx-allocation-vs-10-year-returns-stag.up.railway.app)
+- [Backend API](https://finance-api-production-a7525b82.up.railway.app)
+- [Backend API documentation](https://finance-api-production-a7525b82.up.railway.app/docs)
+
+These are public service URLs, not credentials. Local development continues to use `http://localhost:8080` by default.
+
+## Forecasting purpose and limitations
+
+Stock asset allocation has been proposed as an indicator for estimating annualized S&P 500 returns over the following ten years. This chart lets you compare allocation with realized historical outcomes. Each blue point is dated at the start of its ten-year period; recent allocations have no known ten-year outcome yet.
+
+The chart does not plot predictions for recent years. A historical relationship alone does not establish reliable forecasting performance. Market conditions, data revisions, and the relationship itself can change, and future returns are not guaranteed. This project is an educational visualization, not financial advice or a promise of investment performance.
+
 ## Requirements
 
 - Node.js 22.13 or later.
@@ -37,6 +51,12 @@ In Docker, use the backend service hostname reachable from the frontend containe
 `API_BASE_URL` is server configuration. Do not rename it to `NEXT_PUBLIC_API_BASE_URL`, put credentials in it, or expose environment variables through `next.config.ts`'s `env` option. The REST client has a `server-only` guard so importing it into a Client Component fails the build. Only the chart observations are passed to the browser.
 
 ## Production
+
+For the Railway frontend service, set this **server-side** environment variable:
+
+```dotenv
+API_BASE_URL=https://finance-api-production-a7525b82.up.railway.app
+```
 
 Configure the server environment, then run:
 

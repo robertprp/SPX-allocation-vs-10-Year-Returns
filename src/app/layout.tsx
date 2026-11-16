@@ -16,7 +16,7 @@ const geistMono = localFont({
 export const metadata: Metadata = {
   title: "Stock Asset Allocation vs SPX 10-Year Return",
   description:
-    "Stock asset allocation versus annualized ten-year S&P 500 returns.",
+    "Explore stock allocation as a proposed indicator of annualized ten-year S&P 500 returns. Historical relationships do not guarantee future returns.",
   icons: {
     icon: "@/favicon.ico",
   },
