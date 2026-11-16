@@ -4,7 +4,7 @@ Stock asset allocation and S&P 500 annualized ten-year returns, with recession s
 
 ## Development
 
-Use Node.js 22.13+ and the pnpm version pinned in `package.json` (via Corepack or `npx pnpm@12.21.0`).
+Use Node.js 22.13+ and the pnpm version pinned in `package.json` (via Corepack or `npx pnpm@10.34.9`).
 
 ```sh
 pnpm install --frozen-lockfile
