@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test tests/*.test.ts",
+    "test": "tsx --conditions=react-server --test tests/*.test.ts",
     "prettier": "prettier --write .",
     "api:schema": "node scripts/pull-openapi.mjs",
     "api:generate": "openapi-typescript openapi.json -o src/core/api/types.generated.ts",
@@ -22,7 +22,8 @@
     "next": "16.4.6",
     "react": "19.3.1",
     "react-chartjs-2": "5.3.1",
-    "react-dom": "19.3.1"
+    "react-dom": "19.3.1",
+    "server-only": "0.0.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.3.5",

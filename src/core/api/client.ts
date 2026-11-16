@@ -1,3 +1,5 @@
+import "server-only";
+import { apiBaseUrl } from "./base-url.mjs";
 import type { ApiErrorBody } from "./types";
 
 export class ApiError extends Error {
@@ -47,10 +49,7 @@ export async function apiGet<T>(
   path: string,
   signal?: AbortSignal,
 ): Promise<T> {
-  const base = (process.env.API_BASE_URL || "http://localhost:8080").replace(
-    /\/+$/,
-    "",
-  );
+  const base = apiBaseUrl(process.env.API_BASE_URL || undefined);
   for (let attempt = 0; ; attempt++) {
     const response = await fetch(`${base}${path}`, {
       method: "GET",

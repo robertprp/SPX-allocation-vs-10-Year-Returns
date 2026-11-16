@@ -1,9 +1,7 @@
 import assert from "node:assert/strict";
+import { apiBaseUrl } from "../src/core/api/base-url.mjs";
 // Verify full allocation history, unchanged cohort dates, and 120-month CAGR.
-const base = (process.env.API_BASE_URL || "http://localhost:8080").replace(
-  /\/+$/,
-  "",
-);
+const base = apiBaseUrl(process.env.API_BASE_URL || undefined);
 async function get(path) {
   const response = await fetch(base + path, {
     signal: AbortSignal.timeout(10_000),

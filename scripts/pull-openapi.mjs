@@ -1,9 +1,7 @@
 import { writeFile } from "node:fs/promises";
+import { apiBaseUrl } from "../src/core/api/base-url.mjs";
 
-const base = (process.env.API_BASE_URL || "http://localhost:8080").replace(
-  /\/+$/,
-  "",
-);
+const base = apiBaseUrl(process.env.API_BASE_URL || undefined);
 const response = await fetch(`${base}/openapi.json`, {
   signal: AbortSignal.timeout(10_000),
 });
@@ -17,4 +15,4 @@ await writeFile(
   new URL("../openapi.json", import.meta.url),
   `${JSON.stringify(schema, null, 2)}\n`,
 );
-console.log(`Updated openapi.json from ${base}`);
+console.log("Updated openapi.json.");
