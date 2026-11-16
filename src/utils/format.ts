@@ -7,11 +7,13 @@ export function formatBigNumber(
   decimals: number,
   multiplier = 1,
 ): string {
-  return new BigNumber(value ?? 0).multipliedBy(multiplier).toFixed(decimals);
+  if (value === null || value === undefined) return "Unavailable";
+  return new BigNumber(value).multipliedBy(multiplier).toFixed(decimals);
 }
 
 export function formatDate(date: Date | string | null | undefined): string {
   date = new Date(date ?? "");
 
-  return `${date.getUTCDay()}/${date.getUTCMonth() + 1}/${date.getUTCFullYear()}`
+  if (Number.isNaN(date.getTime())) return "Unavailable";
+  return `${date.getUTCDate()}/${date.getUTCMonth() + 1}/${date.getUTCFullYear()}`;
 }

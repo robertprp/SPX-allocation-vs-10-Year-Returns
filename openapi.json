@@ -1,0 +1,767 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Financial Data API",
+    "description": "Read-only financial time series and allocation analysis. All timestamps are UTC RFC 3339. Decimal financial values are JSON strings to preserve precision. Fractions represent ratios, not percentage points. Empty collections return 200 with []. Forecasts require sufficient ingested history; 503 means data or a dependency is unavailable. No authentication is configured; run locally or behind your own authenticated gateway.",
+    "license": {
+      "name": ""
+    },
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "Current API server"
+    }
+  ],
+  "paths": {
+    "/api/v1/analysis/allocation-returns": {
+      "get": {
+        "tags": [
+          "analysis"
+        ],
+        "summary": "Historical allocation regression, preserving the former GraphQL analysis.",
+        "description": "Uses nonzero allocation/return pairs for ordinary least squares. Expected and extrapolated\nreturns are approximate numeric fractions (0.05 = 5%). Preserves the historical 90-day\npublication adjustment and price-ratio extrapolation. The SQL correlation view uses its own\npositive-return filter, so its squared correlation need not equal the regression R².\nRequires monthly history, allocations, daily observations and a nonconstant regression sample.",
+        "operationId": "getAllocationReturnsAnalysis",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AllocationAnalysis"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/datasets": {
+      "get": {
+        "tags": [],
+        "summary": "Inspect stored row counts and observation coverage. This is not a job-success log.",
+        "operationId": "getDatasetCoverage",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DatasetStatus"
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/recessions": {
+      "get": {
+        "tags": [],
+        "operationId": "listRecessions",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "description": "Inclusive lower bound (UTC RFC 3339). Recession filters apply to start_date.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "Inclusive upper bound (UTC RFC 3339).",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Maximum rows, default 100, allowed 1..=1000. Results are oldest first.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "default": 100,
+              "maximum": 1000,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "Rows to skip, default 0, allowed 0..=1000000.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "default": 0,
+              "maximum": 1000000,
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RecessionModel"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sp500/daily": {
+      "get": {
+        "tags": [],
+        "operationId": "listSp500Daily",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "description": "Inclusive lower bound (UTC RFC 3339). Recession filters apply to start_date.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "Inclusive upper bound (UTC RFC 3339).",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Maximum rows, default 100, allowed 1..=1000. Results are oldest first.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "default": 100,
+              "maximum": 1000,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "Rows to skip, default 0, allowed 0..=1000000.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "default": 0,
+              "maximum": 1000000,
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SP500DailyModel"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sp500/daily/latest": {
+      "get": {
+        "tags": [],
+        "summary": "Get the newest stored daily S&P 500 total-return observation (^SP500TR).",
+        "operationId": "getLatestSp500Daily",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SP500DailyModel"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sp500/monthly": {
+      "get": {
+        "tags": [],
+        "operationId": "listSp500Monthly",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "description": "Inclusive lower bound (UTC RFC 3339). Recession filters apply to start_date.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "Inclusive upper bound (UTC RFC 3339).",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Maximum rows, default 100, allowed 1..=1000. Results are oldest first.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "default": 100,
+              "maximum": 1000,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "Rows to skip, default 0, allowed 0..=1000000.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "default": 0,
+              "maximum": 1000000,
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SP500MonthlyModel"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stock-asset-allocation": {
+      "get": {
+        "tags": [],
+        "operationId": "listStockAssetAllocation",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "description": "Inclusive lower bound (UTC RFC 3339). Recession filters apply to start_date.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "Inclusive upper bound (UTC RFC 3339).",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Maximum rows, default 100, allowed 1..=1000. Results are oldest first.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "default": 100,
+              "maximum": 1000,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "Rows to skip, default 0, allowed 0..=1000000.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "default": 0,
+              "maximum": 1000000,
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StockAssetAllocationModel"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/healthz": {
+      "get": {
+        "tags": [],
+        "summary": "Check that the HTTP process is running. Does not imply that ingestion succeeded.",
+        "operationId": "getLiveness",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/readyz": {
+      "get": {
+        "tags": [],
+        "summary": "Check database connectivity. Use /api/v1/datasets to inspect data coverage.",
+        "operationId": "getReadiness",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AllocationAnalysis": {
+        "type": "object",
+        "required": [
+          "expected_returns",
+          "extrapolated_returns",
+          "last_updated_date",
+          "last_extrapolated_date",
+          "data"
+        ],
+        "properties": {
+          "correlation_squared": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AllocationPoint"
+            }
+          },
+          "expected_returns": {
+            "type": "number",
+            "format": "double"
+          },
+          "extrapolated_returns": {
+            "type": "number",
+            "format": "double"
+          },
+          "last_extrapolated_date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "last_updated_date": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AllocationPoint": {
+        "type": "object",
+        "required": [
+          "date"
+        ],
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Legacy allocation publication-date adjustment: add 90 days, then round up to month start."
+          },
+          "percentage": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Allocation ratio. Decimal string; for example \"0.25\" means 25%."
+          },
+          "return_10": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Realized forward ten-year annualized return. Null when future observations are unavailable."
+          }
+        }
+      },
+      "DatasetStatus": {
+        "type": "object",
+        "required": [
+          "dataset",
+          "rows"
+        ],
+        "properties": {
+          "dataset": {
+            "type": "string"
+          },
+          "latest_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Latest observation, not the time the scraper last ran. Null when empty."
+          },
+          "rows": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "Health": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "RangeQuery": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Inclusive lower bound (UTC RFC 3339). Recession filters apply to start_date."
+          },
+          "limit": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Maximum rows, default 100, allowed 1..=1000. Results are oldest first."
+          },
+          "offset": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Rows to skip, default 0, allowed 0..=1000000."
+          },
+          "to": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Inclusive upper bound (UTC RFC 3339)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "RecessionModel": {
+        "type": "object",
+        "required": [
+          "start_date",
+          "end_date"
+        ],
+        "properties": {
+          "end_date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "SP500DailyModel": {
+        "type": "object",
+        "required": [
+          "date",
+          "value"
+        ],
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      },
+      "SP500MonthlyModel": {
+        "type": "object",
+        "required": [
+          "date"
+        ],
+        "properties": {
+          "adjusted_close": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "close": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cpi": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "dividend": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "earnings": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "gs10": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "pe10": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "StockAssetAllocationModel": {
+        "type": "object",
+        "required": [
+          "date",
+          "percentage"
+        ],
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "percentage": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,119 +1,103 @@
 import Chart from "@/components/Chart";
-import { AllocationAndSpxReturnsQuery } from "@/core/api/gql/stock-to-asset-allocation.generated";
-import { QUERY_ALLOCATION_AND_Spx_RETURNS } from "@/core/api/gql/stock-to-asset-allocation";
-import BigNumber from "bignumber.js";
+import RefreshData from "@/components/RefreshData";
+import { ApiError } from "@/core/api/client";
+import { getAllocationAnalysis, loadAllRecessions } from "@/core/api/endpoints";
+import type { AllocationAnalysis } from "@/core/api/types";
 import { formatBigNumber, formatDate } from "@/utils/format";
-import { createApolloClient } from "@/core/api/client";
-import {RECESSION_QUERY} from "@/core/api/gql/recession";
-import {RecessionQuery} from "@/core/api/gql/recession.generated";
-export const revalidate = 3600
+
+// Load at request time so an unavailable API never becomes a cached build result.
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
-  const client = createApolloClient();
-  const context = { next: { revalidate } };
-  const { error, loading, data } =
-    await client.query<AllocationAndSpxReturnsQuery>({
-      query: QUERY_ALLOCATION_AND_Spx_RETURNS,
-      context
-    });
-
-  const { data: recessionData } = await client.query<RecessionQuery>({
-    query: RECESSION_QUERY,
-    context
-  });
-
-  if (loading) return <p>Loading...</p>;
-  if (error) return <p>Error: {error.message}</p>;
-
-  const {
-    correlationSquared,
-    expectedReturns,
-    lastUpdatedDate,
-    extrapolatedReturns,
-    lastExtrapolatedDate,
-    chartData,
-  } = processQueryData(data);
-
-  const chartConfig = {
-    allocationAxisTitle: "Stock Allocation (%)",
-    allocationPercentageMin: 17.5,
-    allocationPercentageMax: 57.5,
-    chartTitle: "Stock Asset Allocation vs S&P 500 Returns",
-    returnsAxisTitle: "S&P 500 10-Year Returns (%)",
-    recessionData: recessionData?.getRecessionData ?? []
-  };
+  const [analysis, recessions] = await Promise.allSettled([
+    getAllocationAnalysis(),
+    loadAllRecessions(),
+  ]);
 
   return (
-    <div className="py-10">
-      <div className="max-w-4xl mx-auto">
-        <Header title="Stock Asset Allocation vs SPX 10-Year Return" />
-        <div>
+    <main className="py-10 container-padding">
+      <h1 className="mx-auto max-w-4xl text-3xl font-extrabold text-center">
+        Stock Asset Allocation vs SPX 10-Year Return
+      </h1>
+      {analysis.status === "rejected" ? (
+        <div role="status" className="py-10 text-center">
           <p>
-            This is a tool to help investors understand the correlation between
-            stock asset allocation and S&P 500 returns. The tool uses a linear
-            regression model to predict the correlation between the two variables.
-            The model is trained on historical data and is updated regularly to
-            reflect changes in the market.
-          </p>          
-          <p>
-            If you want to support this project, so I can spin up a server and fetch data everyday,
-            you can donate to this EVM address: <span className="font-bold">0x284653914156BF2729b04b5FfA68d722f13b034A</span>
+            {analysis.reason instanceof ApiError &&
+            analysis.reason.status === 503
+              ? "Allocation analysis is temporarily unavailable. Data may still be loading or may be insufficient for analysis."
+              : "Unable to load allocation analysis. Please try again."}
           </p>
+          <RefreshData />
         </div>
+      ) : (
+        <>
+          {analysis.value.data.length === 0 ? (
+            <p role="status" className="py-10 text-center">
+              No allocation observations are available yet.
+            </p>
+          ) : (
+            <div className="pt-10">
+              <Chart
+                chartData={analysis.value.data}
+                recessionData={
+                  recessions.status === "fulfilled" ? recessions.value : []
+                }
+              />
+            </div>
+          )}
+          {recessions.status === "rejected" && (
+            <div role="status" className="text-center">
+              <p>
+                Recession periods are unavailable. Recession shading could not
+                be loaded.
+              </p>
+              <RefreshData />
+            </div>
+          )}
+          <Statistics analysis={analysis.value} />
+        </>
+      )}
+      <div className="mx-auto mt-4 text-center">
+        If you want to contact me, please reach out at{" "}
+        <a
+          className="underline font-bold text-blue-500"
+          href="mailto:me@rbus.me"
+        >
+          me@rbus.me
+        </a>
       </div>
-      <div className="pt-10">
-        <Chart {...chartConfig} chartData={chartData} />
-      </div>
-      <Statistics
-      correlationSquared={correlationSquared}
-      expectedReturns={expectedReturns}
-      lastUpdatedDate={lastUpdatedDate}
-      extrapolatedReturns={extrapolatedReturns}
-      lastExtrapolatedDate={lastExtrapolatedDate}
-      />
-      
-      <div className="mx-auto flex justify-center mt-2">
-        If you want to contact me, please reach out at&nbsp;
-        <a className="underline font-bold text-blue-500" href="mailto:me@rbus.me">me@rbus.me</a>
-      </div>
-    </div>
+    </main>
   );
 }
 
-function Header({ title }: { title: string }) {
-  return <div className="text-3xl font-extrabold text-center">{title}</div>;
-}
-
-function Statistics({
-  correlationSquared,
-  expectedReturns,
-  lastUpdatedDate,
-  extrapolatedReturns,
-  lastExtrapolatedDate,
-}: {
-  correlationSquared: string;
-  expectedReturns: string;
-  lastUpdatedDate: string;
-  extrapolatedReturns: string;
-  lastExtrapolatedDate: string;
-}) {
+function Statistics({ analysis }: { analysis: AllocationAnalysis }) {
   return (
     <div className="flex justify-center items-center flex-col">
-      <div className="mt-10 mx-auto grid grid-cols-3 gap-2">
-        <StatCard label="R²" value={correlationSquared} />
+      <div className="mt-10 mx-auto grid grid-cols-1 sm:grid-cols-3 gap-2">
         <StatCard
-        label="Expected 10-Year SPX Returns"
-        value={`${expectedReturns}%`}
+          label="Squared Correlation"
+          value={formatBigNumber(analysis.correlation_squared, 5)}
         />
-        <StatCard label="Data Last Updated Date" value={lastUpdatedDate} />
         <StatCard
-        label="Extrapolated 10-Year SPX Returns"
-        value={`${extrapolatedReturns}%*`}
-        span={2}
+          label="Expected Annualized 10-Year SPX Return"
+          value={`${formatBigNumber(analysis.expected_returns, 2, 100)}%`}
         />
-        <StatCard label="Last Extrapolated Date" value={lastExtrapolatedDate} />
+        <StatCard
+          label="Latest Allocation Publication Date"
+          value={formatDate(analysis.last_updated_date)}
+        />
+        <StatCard
+          label="Extrapolated Annualized 10-Year SPX Return"
+          value={`${formatBigNumber(analysis.extrapolated_returns, 2, 100)}%*`}
+          wide
+        />
+        <StatCard
+          label="Last Extrapolated Date"
+          value={formatDate(analysis.last_extrapolated_date)}
+        />
       </div>
       <small className="mt-3">
-        * Based on the current price of the SPX index
+        * Based on the latest S&P 500 total-return observation.
       </small>
     </div>
   );
@@ -122,57 +106,18 @@ function Statistics({
 function StatCard({
   label,
   value,
-  span = 1,
+  wide = false,
 }: {
   label: string;
   value: string;
-  span?: number;
+  wide?: boolean;
 }) {
   return (
     <div
-      className={`border text-center p-2 border-black ${span > 1 ? `col-span-${span}` : ""}`}
+      className={`border text-center p-2 border-black ${wide ? "sm:col-span-2" : ""}`}
     >
       <span>{label}: </span>
       <span className="font-bold">{value}</span>
     </div>
   );
-}
-
-function processQueryData(data: AllocationAndSpxReturnsQuery) {
-  const correlationSquared = formatBigNumber(
-    data.queryAllocationAndSpxReturns.correlationSquared,
-    5,
-  );
-  const expectedReturns = formatBigNumber(
-    data.queryAllocationAndSpxReturns.expectedReturns,
-    2,
-    100,
-  );
-  const lastUpdatedDate = formatDate(
-    data.queryAllocationAndSpxReturns.lastUpdatedDate,
-  );
-  const extrapolatedReturns = formatBigNumber(
-    data.queryAllocationAndSpxReturns.extrapolatedReturns,
-    2,
-    100,
-  );
-  const lastExtrapolatedDate = formatDate(
-    data.queryAllocationAndSpxReturns.lastExtrapolatedDate,
-  );
-
-  const chartData =
-    data.queryAllocationAndSpxReturns.data?.map((item) => ({
-      date: new Date(item.date).toDateString(),
-      return_10: new BigNumber(item.return10 ?? 0).toNumber(),
-      percentage: new BigNumber(item.percentage ?? 0).toNumber(),
-    })) ?? [];
-
-  return {
-    correlationSquared,
-    expectedReturns,
-    lastUpdatedDate,
-    extrapolatedReturns,
-    lastExtrapolatedDate,
-    chartData,
-  };
 }
