@@ -35,15 +35,37 @@ export default function AllocationChart({
   chartData: AllocationPoint[];
   recessionData: Recession[];
 }) {
+  const latestAllocation = chartData.findLast(
+    (point) => point.percentage != null,
+  );
+  const latestReturn = chartData.findLast((point) => point.return_10 != null);
+  const hasPendingReturns =
+    latestReturn != null &&
+    chartData.some(
+      (point) =>
+        point.return_10 == null &&
+        Date.parse(point.date) > Date.parse(latestReturn.date),
+    );
+  const coverageDate = new Intl.DateTimeFormat("en-GB", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+
   const options: ChartOptions<"line"> = {
+    animation: false,
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
       title: {
         display: true,
-        text: "Stock Asset Allocation vs S&P 500 Returns",
+        text: "Stock Asset Allocation vs Annualized 10-Year SPX Return",
       },
-      legend: { position: "top" },
+      legend: {
+        position: "top",
+        align: "start",
+        labels: { usePointStyle: true, pointStyle: "line" },
+      },
       tooltip: {
         mode: "index",
         intersect: false,
@@ -81,32 +103,48 @@ export default function AllocationChart({
       },
       allocation: {
         position: "left",
-        grid: { display: false },
+        grid: { color: "rgba(0, 0, 0, 0.12)" },
         title: { display: true, text: "Stock Allocation (%)" },
         ticks: { callback: (value) => `${value}%` },
-        min: 17.5,
-        max: 57.5,
+        grace: "5%",
       },
       returns: {
         position: "right",
         grid: { display: false },
         title: { display: true, text: "S&P 500 10-Year Returns (%)" },
         ticks: { callback: (value) => `${value}%` },
-        max: 24,
-        min: -7.5,
+        grace: "5%",
         reverse: true,
       },
     },
   };
 
   return (
-    <div className="relative h-[60vh] w-full">
-      <Line
-        data={allocationChartData(chartData)}
-        options={options}
-        role="img"
-        aria-label="Stock allocation and S&P 500 annualized ten-year returns, with recessions shaded grey"
-      />
-    </div>
+    <figure>
+      <div className="relative h-[60vh] w-full">
+        <Line
+          data={allocationChartData(chartData)}
+          options={options}
+          role="img"
+          aria-label="Stock allocation and S&P 500 annualized ten-year returns, with recessions shaded grey"
+        />
+      </div>
+      <figcaption className="mt-3 text-center text-sm text-gray-700">
+        <p>
+          {latestAllocation
+            ? `Allocation observations through ${coverageDate.format(new Date(latestAllocation.date))}. `
+            : "No allocation observations are available. "}
+          {latestReturn
+            ? `Realized ten-year returns through ${coverageDate.format(new Date(latestReturn.date))}.`
+            : "Realized ten-year returns are not yet available."}
+        </p>
+        {hasPendingReturns && (
+          <p>
+            More recent periods do not yet have ten years of future observations
+            to calculate a realized return.
+          </p>
+        )}
+      </figcaption>
+    </figure>
   );
 }
